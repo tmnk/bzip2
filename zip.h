@@ -78,9 +78,11 @@ void recursive_step(std::string dir, std::function<void(std::string)> func) {
  		std::string tmp;
         if ( S_ISDIR( statbuf.st_mode ) ) { 
             if ( strcmp( ".", entry->d_name ) == 0 || strcmp( "..", entry->d_name ) == 0 ) continue; 
+            //std::cout << "dir " << entry->d_name << std::endl;
             recursive_step(tmp = entry->d_name, func);
         }
         else{
+        	//std::cout << "file " << entry->d_name << std::endl;
             func(tmp = entry->d_name);
         }
     }
@@ -90,6 +92,18 @@ void recursive_step(std::string dir, std::function<void(std::string)> func) {
 
 void encode(std::string filename) {
 	if (filename.size()) inputFile = filename;
+	std::cout << inputFile << std::endl;
+	if (inputFile.size() > 5) {
+		std::string suff = inputFile.substr(inputFile.size() - 5, inputFile.size() - 2);
+		if (!strcmp(suff.c_str(), ".mzip")) {
+			std::cout << "mzip: " << inputFile << " already has .mzip suffix -- unchanged" << std::endl;
+			return;
+		}
+	}
+	else {
+		std::cout << "mzip: " << inputFile << " already has .mzip suffix -- unchanged" << std::endl;
+		return;
+	}
 	std::ifstream inFile(inputFile, std::ios::binary | std::ios::in);
 	if (flags & C) outputFile = "";
 	else outputFile = inputFile + ".mzip";
