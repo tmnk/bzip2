@@ -100,10 +100,6 @@ void encode(std::string filename) {
 			return;
 		}
 	}
-	else {
-		std::cout << "mzip: " << inputFile << " already has .mzip suffix -- unchanged" << std::endl;
-		return;
-	}
 	std::ifstream inFile(inputFile, std::ios::binary | std::ios::in);
 	if (flags & C) outputFile = "";
 	else outputFile = inputFile + ".mzip";
