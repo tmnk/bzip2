@@ -24,6 +24,7 @@
 std::string bwTransform();
 void mtf(std::string &str);
 void huffEncode(std::string &str);
+void help();
 
 void createFlag(char f) {
 	if (f == 'c') flags |= C;
@@ -32,6 +33,7 @@ void createFlag(char f) {
 	else if (f == 't') flags |= T;
 	else if (f == 'r') flags |= R;
 	else if (f == '1') flags |= F;
+	else help();
 }
 
 void help() {std::cout << "usage: ./mzip [flags and input files in any order]\n\n   -h     print this message\n   -l     list compressed file\n   -d     force decompression\n   -f     overwrite existing output files\n   -c     output to standard out\n   -1     fast\n   -9     best\n" << std::endl;}
@@ -86,7 +88,8 @@ void recursive_step(std::string dir, std::function<void(std::string)> func) {
     closedir( dp );
 }
 
-void encode() {
+void encode(std::string filename) {
+	if (filename.size()) inputFile = filename;
 	std::ifstream inFile(inputFile, std::ios::binary | std::ios::in);
 	if (flags & C) outputFile = "";
 	else outputFile = inputFile + ".mzip";
@@ -100,7 +103,6 @@ void encode() {
 		sourceStr = bwTransform();
 		mtf(sourceStr);
 		huffEncode(sourceStr);
-			return;
 		sizeOfCompressed = (unsigned long long)(3 * sizeof(long long) + 258 * sizeof(int) + sizeOfResult * sizeof(char));
 		if (flags & C) {
 			std::cout << numOfPi << sizeOfCompressed << sizeOfResult << beginReverse;
@@ -118,15 +120,60 @@ void encode() {
 			outFile.write((char *)&numOfPi, sizeof(numOfPi));
 		}
 	}
+	outFile.write((char *)&numOfPi, sizeof(numOfPi));
 	inFile.close();
 	outFile.close();
 }
+
+void decode(std::string filename) {
+	if (filename.size()) inputFile = filename;
+	std::string suff = inputFile.substr(inputFile.size() - 5, inputFile.size() - 2);
+	if (!strcmp(suff.c_str(), ".mzip")) {
+		std::cout << "mzip: " << inputFile << ": unknown suffix -- ignored" << std::endl;
+		return;
+	}
+	return;
+	std::ifstream inFile(inputFile, std::ios::binary | std::ios::in);
+	if (flags & C) outputFile = "";
+	else {
+		outputFile = inputFile;
+		outputFile.pop_back(); //p
+		outputFile.pop_back(); //i
+		outputFile.pop_back(); //z
+		outputFile.pop_back(); //m
+		outputFile.pop_back(); //.
+	}
+	std::ofstream outFile(outputFile, std::ios::binary | std::ios::out);
+	sourceStr.resize(sizeOfBlock);
+	unsigned long long PI1 = 0, PI2 = 0;
+	inFile.read((char *)&PI1, sizeof(PI1));
+	std::streamsize readCount = inFile.gcount();
+	inFile.seekg(readCount - 8,std::ios::beg);
+	inFile.read((char *)&PI2, sizeof(PI2));
+	if (PI1 != numOfPi || PI2 != numOfPi) {
+		std::cout << "mzip: " << inputFile << ": not in mzip format" << std::endl;
+		return;
+	}
+	return;
+	while (!inFile.eof()){
+		inFile.read((char*)&sourceStr[0], sourceStr.size());
+		std::streamsize readCount = inFile.gcount();
+		if (readCount == 0) break;
+		if (readCount < sizeOfBlock) sourceStr.resize(int(readCount));
+
+	}
+}
+
 
 int zip() {
 	if (flags == 0 || flags & F) {
 		if (flags) sizeOfBlock = 100000;
 		//std::cout << sizeof(const char) << std::endl;
-		encode();
+		encode("");
+	}
+
+	if (flags & D) {
+		decode("");
 	}
 
 	struct stat statbuf;
@@ -141,7 +188,12 @@ int zip() {
 		list(inputFile);
 		return 0;
 	}
-		
+	if (flags & R && !(flags & D)) {
+		recursive_step(inputFile.c_str(), &encode);
+	}
+	if (flags & R && flags & D) {
+		recursive_step(inputFile.c_str(), &decode);
+	}
 	return 0;
 }
 
