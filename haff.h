@@ -62,8 +62,10 @@ void buildTable(Node *node){
 
 unsigned char recoveryChar(Node *tree, std::string &str) {
 	while(1) {
-		if (!tree->left && !tree->right) 
-			return tree->k;
+		if (!tree->left && !tree->right) {
+			if (tree == root) indexOfResult++;
+			return (unsigned char)tree->k;
+		}
 		tc = str[int(indexOfResult / 8)];
 		tc =  tc & (1 << (7 - indexOfResult + int(indexOfResult / 8) * 8));
 		if (tc != 0) {
@@ -80,7 +82,7 @@ unsigned char recoveryChar(Node *tree, std::string &str) {
 	return (unsigned char)tree->k;
 }
 
-std::string huffDecode(std::string &string, unsigned int linerTable[]) {
+std::string huffDecode(std::string &string) {
 	root = buildTree(string);
 	std::string result;
 	const char *str = string.c_str();
@@ -124,4 +126,5 @@ void huffEncode(std::string &str) {
 		linerStr += ch;
 	}
 	sizeOfResult = j;
+	if (sizeOfResult == 0) sizeOfResult = linerTable[(unsigned char)str[0]];
 }
