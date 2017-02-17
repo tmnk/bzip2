@@ -95,6 +95,7 @@ std::string huffDecode(std::string &string, unsigned int linerTable[]) {
 
 
 void huffEncode(std::string &str) {
+	for (int i = 0; i < 256; i++) linerTable[i] = 0;
 	for (int i = 0; i < str.size(); i++) linerTable[(unsigned char)str[i]]++;
 	root = buildTree(str);
 	buildTable(root);
