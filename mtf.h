@@ -12,9 +12,9 @@ void mtf(std::string &str) {
 	for (int i = 0; i < str.size(); i++) {
 		int j = 0;
 		for (std::list<unsigned char>::iterator it = al.begin(); it != al.end(); j++, it++) {
-			if (str[i] == *it) {
-				al.remove(str[i]);
-				al.push_front(str[i]);
+			if ((unsigned char)str[i] == *it) {
+				al.remove((unsigned char)str[i]);
+				al.push_front((unsigned char)str[i]);
 				str[i] = j;
 				break;
 			}
