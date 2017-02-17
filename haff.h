@@ -1,18 +1,18 @@
 #include "num.h"
 
 enum {
-	GoToPar = -4, Lson = -3, Rson = -2
+	GoToPar = 256, Lson = -3, Rson = -2
 };
 
 class Node{
 public:
-	unsigned char k;
+	unsigned short int k;
 	int d;
 	Node *left, *right, *parent;
-	Node() { k = GoToPar; left = right = parent = NULL; };
+	Node() { k = 256; left = right = parent = NULL; };
 	Node (unsigned char a, int b) : k(a), d(b), left(NULL), right(NULL)  {};
-	Node (Node *l, Node *r) : left(l), right(r), k(GoToPar) {};
-	Node (Node *p) : k(GoToPar), parent(p), left(NULL), right(NULL)  {};
+	Node (Node *l, Node *r) : left(l), right(r), k(256) {};
+	Node (Node *p) : k(256), parent(p), left(NULL), right(NULL)  {};
 };
 
 Node *root;
@@ -80,14 +80,15 @@ unsigned char recoveryChar(Node *tree, std::string &str) {
 	return (unsigned char)tree->k;
 }
 
-std::string huffDecode(std::string &string, int linerTable[]) {
+std::string huffDecode(std::string &string, unsigned int linerTable[]) {
 	root = buildTree(string);
-	buildTable(root);
 	std::string result;
 	const char *str = string.c_str();
+	indexOfResult = 0;
 	while (indexOfResult < sizeOfResult) {
 		result += recoveryChar(root, string);
 	}
+	//if (!result.size()) return 
 	return result;
 }
 
@@ -97,6 +98,7 @@ void huffEncode(std::string &str) {
 	for (int i = 0; i < str.size(); i++) linerTable[(unsigned char)str[i]]++;
 	root = buildTree(str);
 	buildTable(root);
+	linerStr.clear();
 	std::string buff;
 	unsigned char ch = 0;
 	int j = 0;
@@ -114,8 +116,8 @@ void huffEncode(std::string &str) {
 	}
 	if (buff.size() > 0) {
 		ch = 0;
-		for (int k = buff.size() - 1 ; k > 0; k--) {
-			ch |= (buff[k] == '0' ? 0 : 1) << (buff.size() - 1  - k);
+		for (int k = 0 ; k < buff.size(); k++) {
+			ch |= (buff[k] == '0' ? 0 : 1) << (7  - k);
 			j++;
 		}
 		linerStr += ch;
