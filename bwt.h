@@ -35,14 +35,14 @@ std::string bwtReverse(std::string &str) {
 	std::map<unsigned char, int> mp;
 	unsigned char c = sortStr[0];
 	for (int i = 1; i < sortStr.size(); i++)
-		if (!mp[sortStr[i]] && c != sortStr[i]) 
-			mp[sortStr[i]] = i;
+		if (!mp[(unsigned char)sortStr[i]] && c != (unsigned char)sortStr[i]) 
+			mp[(unsigned char)sortStr[i]] = i;
 	for (int i = 0; i < str.size(); i++)
-		id.push_back(mp[str[i]]++);
+		id.push_back(mp[(unsigned char)str[i]]++);
 
 	int start = 0, sh = beginReverse;
 	for (int i = 0; i < str.size(); i++) {
-		result[sourceStr.size() - 1 - i] = str[sh];
+		result[str.size() - 1 - i] = str[sh];
 		sh = id[sh];
 	}
 	return result;
