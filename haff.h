@@ -53,7 +53,7 @@ void buildTable(Node *node){
 		buildTable(node->right);
 	}
 	if (node->k != GoToPar) {
-		table[node->k] = code;
+		table[(unsigned char)node->k] = code;
 	}
 	if (code.size()) code.pop_back();
 }
@@ -86,7 +86,7 @@ std::string huffDecode(std::string &string) {
 	std::string result;
 	const char *str = string.c_str();
 	indexOfResult = 0;
-	while (indexOfResult < sizeOfResult) {
+	while ((unsigned)indexOfResult < sizeOfResult) {
 		result += recoveryChar(root, string);
 	}
 	//if (!result.size()) return 
@@ -97,14 +97,14 @@ std::string huffDecode(std::string &string) {
 
 void huffEncode(std::string &str) {
 	for (int i = 0; i < 256; i++) linerTable[i] = 0;
-	for (int i = 0; i < str.size(); i++) linerTable[(unsigned char)str[i]]++;
+	for (unsigned int i = 0; i < str.size(); i++) linerTable[(unsigned char)str[i]]++;
 	root = buildTree(str);
 	buildTable(root);
 	linerStr.clear();
 	std::string buff;
 	unsigned char ch = 0;
 	int j = 0;
-	for (int i = 0; i < str.size(); ) {
+	for (unsigned int i = 0; i < str.size(); ) {
 		if (buff.size() < 8) buff += table[str[i++]];
 		if (buff.size() < 8) continue;
 		ch = 0;
@@ -117,7 +117,7 @@ void huffEncode(std::string &str) {
 	}
 	if (buff.size() > 0) {
 		ch = 0;
-		for (int k = 0 ; k < buff.size(); k++) {
+		for (unsigned int k = 0 ; k < buff.size(); k++) {
 			ch |= (buff[k] == '0' ? 0 : 1) << (7  - k);
 			j++;
 		}

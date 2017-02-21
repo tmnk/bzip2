@@ -72,7 +72,7 @@ void mtf(std::string &str) {
 	for (int i = 0; i < 256; i++)
 			al.push_back((unsigned char)i);
 
-	for (int i = 0; i < str.size(); i++) {
+	for (unsigned int i = 0; i < str.size(); i++) {
 		int j = 0;
 		for (LNode *it = al.first; it != NULL; j++, it = it->next) {
 			if ((unsigned char)str[i] == it->val) {
@@ -90,7 +90,7 @@ void mtfDecode(std::string &str) {
 	al.resize(256);
 	for (int i = 0, j = 0; i < 256; i++, j++)
 			al[j] = (unsigned char)i;
-	for (int i = 0; i < str.size(); i++) {
+	for (unsigned int i = 0; i < str.size(); i++) {
 		tmp = al[(unsigned char)str[i]];
 		for (int j = (unsigned char)str[i]; j > 0; j--) 
 			al[j] = al[j - 1];
