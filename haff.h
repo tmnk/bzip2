@@ -19,7 +19,6 @@ Node *root;
 int indexOfResult = 0;
 char tc;
 std::string code;
-//unsigned char *result;
 std::map<unsigned char, std::string > table;
 struct Compare {
 	bool operator() (Node *a, Node *b) {
@@ -105,7 +104,6 @@ void huffEncode(std::string &str) {
 	std::string buff;
 	unsigned char ch = 0;
 	int j = 0;
-	//result = new unsigned char[sizeOfResult / 8 + 1];
 	for (int i = 0; i < str.size(); ) {
 		if (buff.size() < 8) buff += table[str[i++]];
 		if (buff.size() < 8) continue;
