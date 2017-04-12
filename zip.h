@@ -111,10 +111,17 @@ void encode(std::string filename) {
 	else outputFile = inputFile + ".mzip";
 	std::ofstream outFile(outputFile, std::ios::binary | std::ios::out);
 	sourceStr.resize(sizeOfBlock);
-	if (!(flags & C)) outFile.write((char *)&doubleTmp, sizeof(doubleTmp));
-	sourceStr.resize(sizeOfBlock);
 	unsigned int lineSize = 0;
+	if (!(flags & C)) {
+		outFile.write((char *)&doubleTmp, sizeof(doubleTmp));
+		sizeOfOutput += sizeof(doubleTmp) + sizeof(sizeOfOutput) + sizeof(sizeOfUncompressed);
+		std::streamsize readCount = inFile.gcount();
+		sizeOfUncompressed = readCount;
+		outFile.write((char *)&sizeOfOutput, sizeof(sizeOfOutput));
+		outFile.write((char *)&sizeOfUncompressed, sizeof(sizeOfUncompressed));
+	}
 	while (!inFile.eof()){		
+		std::cout << "-----------\n";
 		inFile.read((char*)&sourceStr[0], sourceStr.size());
 		std::streamsize readCount = inFile.gcount();
 		if (readCount == 0) break;
@@ -124,7 +131,6 @@ void encode(std::string filename) {
 		mtf(sourceStr);
 		huffEncode(sourceStr);
 		sizeOfCompressed = (unsigned long long)(3 * sizeof(long long) + 258 * sizeof(int) + sizeOfResult * sizeof(char));
-		outFile.write((char *)&doubleTmp, sizeof(doubleTmp));
 		if (tmm.size() < sizeOfCompressed) {
 			if (flags & C) {
 				std::cout << numOfPi << sizeOfCompressed << sizeOfResult << beginReverse;
@@ -140,6 +146,9 @@ void encode(std::string filename) {
 				outFile.write((char *)&beginReverse, sizeof(beginReverse));
 				outFile.write((char *)linerTable, 256 * sizeof(linerTable[0]));
 				outFile.write((const char *)linerStr.c_str(), linerStr.size() * sizeof(char));
+				sizeOfOutput += sizeof(lineSize) + sizeof(sizeOfCompressed) + sizeof(sizeOfResult) + sizeof(beginReverse) + 256 * sizeof(linerTable[0]) + linerStr.size() * sizeof(char);
+
+				std::cout << lineSize << ", " << sizeOfCompressed << ", " << sizeOfResult << ", " << beginReverse << ", " << sizeOfOutput << "\n";
 			}
 		}
 		else {
@@ -149,14 +158,16 @@ void encode(std::string filename) {
 			else {
 				sizeOfCompressed = tmm.size() + sizeof(flagOfCompress) + sizeof(sizeOfCompressed);
 				outFile.write((char *)&flagOfCompress, sizeof(flagOfCompress));
-				outFile.write((char *)&sizeOfCompressed, sizeof(sizeOfCompressed));
+				outFile.write((char *)&sizeOfOutput, sizeof(sizeOfOutput));
 				outFile.write((char *)&tmm[0], tmm.size());
+				sizeOfOutput += sizeof(flagOfCompress) + sizeof(flagOfCompress) + tmm.size();
 			}
 		}
 	}
 	if (!(flags & C)) {
 		outFile.seekp(0, std::ios::beg);
 		outFile.write((char *)&numOfPi, sizeof(numOfPi));
+		outFile.write((char *)&sizeOfOutput, sizeof(sizeOfOutput));
 	}
 	inFile.close();
 	outFile.close();
@@ -195,32 +206,44 @@ void decode(std::string filename) {
 	}
 	std::ofstream outFile(outputFile, std::ios::binary | std::ios::out);
 	double PI = 0;
+	unsigned long long sc = 0; //!!
 	inFile.read((char *)&PI, sizeof(PI));
+	inFile.read((char *)&sizeOfOutput, sizeof(sizeOfOutput));
+	inFile.read((char *)&sizeOfUncompressed, sizeof(sizeOfUncompressed));
+	sc += sizeof(PI) + sizeof(sizeOfOutput) + sizeof(sizeOfUncompressed);
 	if (PI != numOfPi) {
 		std::cout << PI << " " << numOfPi << std::endl;
 		std::cout << "mzip: " << inputFile << ": not in mzip format" << std::endl;
 		inFile.close();
 		return;
 	}
-	while (!inFile.eof()){
+	while (sc < sizeOfOutput){
 		inFile.read((char *)&flagOfCompress, sizeof(flagOfCompress));
 		if (flagOfCompress) {
-			linerStr.resize(flagOfCompress - 1);
+			linerStr.resize(--flagOfCompress);
+			line = new char[flagOfCompress];
+			std::cout << flagOfCompress << std::endl;
 			inFile.read((char *)&sizeOfCompressed, sizeof(sizeOfCompressed));
 			inFile.read((char *)&sizeOfResult, sizeof(sizeOfResult));
 			inFile.read((char *)&beginReverse, sizeof(beginReverse));
 			inFile.read((char *)linerTable, 256 * sizeof(linerTable[0]));
-			inFile.read(&linerStr[0], sizeOfResult * sizeof(char));
+			sc += sizeof(flagOfCompress) +  sizeof(sizeOfCompressed) + sizeof(sizeOfResult) + sizeof(beginReverse) + 256 * sizeof(linerTable[0]) + flagOfCompress * sizeof(char);
+			std::cout << flagOfCompress << ", " << sizeOfCompressed << ", " << sizeOfResult << ", " << beginReverse << ", " << sc << "\n";
+			inFile.read(line, flagOfCompress * sizeof(char));
+			for (int i = 0; i < flagOfCompress; i++) linerStr[i] = line[i];
 			for (int i = 0; i < 20; i++) std::cout << linerStr[i];
 			std::cout << std::endl;
 			sourceStr = huffDecode(linerStr);
 			mtfDecode(sourceStr);
 			sourceStr = bwtReverse(sourceStr);
+
+			std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!1\n";
 		}
 		else {
 			inFile.read((char *)&sizeOfCompressed, sizeof(sizeOfCompressed));
 			sourceStr.resize(sizeOfCompressed - sizeof(flagOfCompress) - sizeof(sizeOfCompressed));
 			inFile.read(&sourceStr[0], (sizeOfCompressed - sizeof(flagOfCompress) - sizeof(sizeOfCompressed)) * sizeof(char));
+			sc += sizeof(flagOfCompress) +  sizeof(sizeOfCompressed) + (sizeOfCompressed - sizeof(flagOfCompress) - sizeof(sizeOfCompressed)) * sizeof(char);
 		}
 		if (flags & C) std::cout << sourceStr << std::endl;
 		else outFile.write(&sourceStr[0], sourceStr.size());
