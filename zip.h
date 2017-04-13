@@ -32,7 +32,8 @@ void createFlag(char f) {
 	else if (f == 'l') flags |= L;
 	else if (f == 't') flags |= T;
 	else if (f == 'r') flags |= R;
-	else if (f == '1') flags |= F;
+	else if (f == '1') flags |= O;
+	else if (f == '9') flags |= N;
 	else help();
 }
 
@@ -48,15 +49,21 @@ void list(std::string file) {
 		std::cout << "mzip: " << file << " not in mzip format." << std::endl;
 		return ;
 	}
-	std::fstream fin(file);
+	std::ifstream fin(file, std::ios::binary | std::ios::in);
 	if (!fin.is_open()) {
 		std::cout << "mzip: Can't open input file " << file << ": No such file or directory." << std::endl;
 		return ;
 	}
-	fin >> sizeOfUncompressed;
-	fin.seekg (0, std::ios::end);
-    sizeOfCompressed = fin.tellg();
-    printf("%19lld %19lld %5.1f%c %s\n", sizeOfCompressed, sizeOfUncompressed, 1 - double(sizeOfUncompressed / sizeOfCompressed), '%', unzipedName.c_str());
+	double PI = 0;
+	fin.read((char *)&PI, sizeof(PI));
+	fin.read((char *)&sizeOfOutput, sizeof(sizeOfOutput));
+	fin.read((char *)&sizeOfUncompressed, sizeof(sizeOfUncompressed));
+	if (PI != numOfPi) {
+		std::cout << "mzip: " << file << ": not in mzip format" << std::endl;
+		fin.close();
+		return;
+	}
+    printf("%19lld %19lld %5.1f%c %s\n", sizeOfOutput, sizeOfUncompressed, double(double(sizeOfOutput) / sizeOfUncompressed) * 100, '%', unzipedName.c_str());
     fin.close();
     return ;
 }
@@ -65,29 +72,23 @@ void recursive_step(std::string dir, std::function<void(std::string)> func) {
     DIR *dp;
     struct dirent *entry;
     struct stat statbuf;
- 
-    if ( ( dp = opendir( dir.c_str() ) ) == NULL ) {
+    if ((dp = opendir(dir.c_str())) == NULL) {
     	std::cout << "mzip: " << dir <<  " cann't open." << std::endl;
         return;
     }
- 
-    chdir( dir.c_str() ); // перемещаемся в указанную директорию
- 
-    while ( ( entry = readdir( dp ) ) != NULL ) { // цикл по всем файлам указанной директории
-        lstat( entry->d_name, &statbuf ); // считываем информацию о файле в структуру
+    chdir(dir.c_str());
+    while ((entry = readdir(dp)) != NULL) {
+        lstat(entry->d_name, &statbuf);
  		std::string tmp;
-        if ( S_ISDIR( statbuf.st_mode ) ) { 
-            if ( strcmp( ".", entry->d_name ) == 0 || strcmp( "..", entry->d_name ) == 0 ) continue; 
-            //std::cout << "dir " << entry->d_name << std::endl;
+        if (S_ISDIR(statbuf.st_mode)){ 
+            if (strcmp(".", entry->d_name) == 0 || strcmp("..", entry->d_name) == 0) continue;
             recursive_step(tmp = entry->d_name, func);
         }
         else{
-        	//std::cout << "file " << entry->d_name << std::endl;
             func(tmp = entry->d_name);
         }
     }
- 
-    closedir( dp );
+    closedir(dp);
 }
 
 void encode(std::string filename) {
@@ -109,22 +110,24 @@ void encode(std::string filename) {
 
 	if (flags & C) outputFile = "";
 	else outputFile = inputFile + ".mzip";
-	std::ofstream outFile(outputFile, std::ios::binary | std::ios::out);
+	std::fstream outFile(outputFile, std::ios::binary | std::ios::out);
 	sourceStr.resize(sizeOfBlock);
 	unsigned int lineSize = 0;
 	if (!(flags & C)) {
 		outFile.write((char *)&doubleTmp, sizeof(doubleTmp));
-		sizeOfOutput += sizeof(doubleTmp) + sizeof(sizeOfOutput) + sizeof(sizeOfUncompressed);
+		sizeOfOutput = sizeof(doubleTmp) + sizeof(sizeOfOutput) + sizeof(sizeOfUncompressed);
 		std::streamsize readCount = inFile.gcount();
-		sizeOfUncompressed = readCount;
+		sizeOfUncompressed = 0;
 		outFile.write((char *)&sizeOfOutput, sizeof(sizeOfOutput));
 		outFile.write((char *)&sizeOfUncompressed, sizeof(sizeOfUncompressed));
 	}
+	sizeOfUncompressed = 0;
 	while (!inFile.eof()){		
 		inFile.read((char*)&sourceStr[0], sourceStr.size());
 		std::streamsize readCount = inFile.gcount();
 		if (readCount == 0) break;
 		if (readCount < sizeOfBlock) sourceStr.resize(int(readCount));
+		sizeOfUncompressed += int(readCount);
 		std::string tmm = sourceStr;
 		sourceStr = bwTransform();
 		mtf(sourceStr);
@@ -133,7 +136,7 @@ void encode(std::string filename) {
 		if (flags & C) {
 			std::cout << numOfPi << sizeOfCompressed << sizeOfResult << beginReverse;
 			for (int i = 0; i < 256; i++) std::cout<< linerTable[i];
-			for (int i = 0; i < linerStr.size(); i++) std::cout << linerStr[i];
+			for (unsigned int i = 0; i < linerStr.size(); i++) std::cout << linerStr[i];
 			std::cout << numOfPi << std::endl;
 		}
 		else {
@@ -152,6 +155,7 @@ void encode(std::string filename) {
 		outFile.seekp(0, std::ios::beg);
 		outFile.write((char *)&numOfPi, sizeof(numOfPi));
 		outFile.write((char *)&sizeOfOutput, sizeof(sizeOfOutput));
+		outFile.write((char *)&sizeOfUncompressed, sizeof(sizeOfUncompressed));
 	}
 	inFile.close();
 	outFile.close();
@@ -196,11 +200,11 @@ void decode(std::string filename) {
 	inFile.read((char *)&sizeOfUncompressed, sizeof(sizeOfUncompressed));
 	sc += sizeof(PI) + sizeof(sizeOfOutput) + sizeof(sizeOfUncompressed);
 	if (PI != numOfPi) {
-		std::cout << PI << " " << numOfPi << std::endl;
 		std::cout << "mzip: " << inputFile << ": not in mzip format" << std::endl;
 		inFile.close();
 		return;
 	}
+	unsigned int outBlock = 0;
 	while (sc < sizeOfOutput){
 		inFile.read((char *)&flagOfCompress, sizeof(flagOfCompress));
 		if (flagOfCompress) {
@@ -213,13 +217,13 @@ void decode(std::string filename) {
 			sc += sizeof(flagOfCompress) +  sizeof(sizeOfCompressed) + sizeof(sizeOfResult) + sizeof(beginReverse) + 256 * sizeof(linerTable[0]) + flagOfCompress * sizeof(char);
 			// std::cout << flagOfCompress << ", " << sizeOfCompressed << ", " << sizeOfResult << ", " << beginReverse << ", " << sc << "\n";
 			inFile.read(line, flagOfCompress * sizeof(char));
-			for (int i = 0; i < flagOfCompress; i++) linerStr[i] = line[i];
+			for (unsigned int i = 0; i < flagOfCompress; i++) linerStr[i] = line[i];
 			sourceStr = huffDecode(linerStr);
 			mtfDecode(sourceStr);
 			sourceStr = bwtReverse(sourceStr);
 		}
 		if (flags & C) std::cout << sourceStr << std::endl;
-		else outFile.write(&sourceStr[0], sourceStr.size());
+		else outFile.write(&sourceStr[0], currBlockSize);
 	}
 	inFile.close();
 	outFile.close();
@@ -227,13 +231,26 @@ void decode(std::string filename) {
 
 
 int zip() {
-	if (flags == 0) {
-		if (flags) sizeOfBlock = 100000;
-		encode("");
+	if (flags & L) {
+		std::cout << "         compressed        uncompressed  ratio uncompressed_name" << std::endl;
+		if (flags & R) recursive_step(inputFile.c_str(), &list);
+		else list(inputFile);
+		return 0;
+	}
+	if (flags == 0 || flags & O || flags & N) {
+		if (flags & N) sizeOfBlock = MAX_BLOCK;
+		if (flags & R) {
+			if (flags & N) sizeOfBlock = MAX_BLOCK;
+			recursive_step(inputFile.c_str(), &encode);
+		}
+		else encode("");
 		return 0;
 	}
 
+
+
 	if (flags & D) {
+		if (flags & R) recursive_step(inputFile.c_str(), &decode);
 		decode("");
 		return 0;
 	}
@@ -243,18 +260,6 @@ int zip() {
 	if (!(S_ISDIR(statbuf.st_mode) || S_ISREG(statbuf.st_mode))) {
 		std::cout << "mzip: Can't open input file " << inputFile << ": No such file or directory." << std::endl;
 		return 0;
-	}
-	if (flags & L) {
-		std::cout << "         compressed        uncompressed  ratio uncompressed_name" << std::endl;
-		recursive_step(inputFile.c_str(), &list);
-		list(inputFile);
-		return 0;
-	}
-	if (flags & R && !(flags & D)) {
-		recursive_step(inputFile.c_str(), &encode);
-	}
-	if (flags & R && flags & D) {
-		recursive_step(inputFile.c_str(), &decode);
 	}
 	return 0;
 }

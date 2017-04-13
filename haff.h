@@ -86,8 +86,10 @@ std::string huffDecode(std::string &string) {
 	std::string result;
 	const char *str = string.c_str();
 	indexOfResult = 0;
+	currBlockSize = 0;
 	while ((unsigned)indexOfResult < sizeOfResult) {
 		result += recoveryChar(root, string);
+		currBlockSize++;
 	}
 	//if (!result.size()) return 
 	return result;
