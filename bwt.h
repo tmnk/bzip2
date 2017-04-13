@@ -13,7 +13,6 @@ std::string bwTransform() {
 	int *shiftsArray = new int[sourceStr.size()];
 	for (unsigned int i = 0; i < sourceStr.size(); i++) shiftsArray[i] = i;
 	std::qsort(shiftsArray, sourceStr.size(), sizeof(int), &compare);
-	//sourceStr.clear();
 	std::string result;
 	for (unsigned int i = 0; i < sourceStr.size(); i++) {
 		result += (shiftsArray[i] != 0
@@ -42,7 +41,4 @@ std::string bwtReverse(std::string &str) {
 		sh = id[sh];
 	}
 	return result;
-
-
-
 }

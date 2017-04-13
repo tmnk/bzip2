@@ -66,7 +66,6 @@ public:
 
 };
 void mtf(std::string &str) { 
-	//std::list<unsigned char> al;
 	List al;
 	std::string result;
 	for (int i = 0; i < 256; i++)

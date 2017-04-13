@@ -91,7 +91,6 @@ std::string huffDecode(std::string &string) {
 		result += recoveryChar(root, string);
 		currBlockSize++;
 	}
-	//if (!result.size()) return 
 	return result;
 }
 

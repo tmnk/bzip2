@@ -37,7 +37,7 @@ void createFlag(char f) {
 	else help();
 }
 
-void help() {std::cout << "usage: ./mzip [flags and input files in any order]\n\n   -h     print this message\n   -l     list compressed file\n   -d     force decompression\n   -f     overwrite existing output files\n   -c     output to standard out\n   -1     fast\n   -9     best\n" << std::endl;}
+void help() {std::cout << "usage: ./mzip [flags and input files in any order]\n\n   -h     print this message\n   -l     list compressed file contents\n   -d     force decompression\n   -r     operate recursively on directories\n   -c     output to standard out\n   -1     fast\n   -9     best\n\nWith no FILE, or when FILE is -, read standard input.\n" << std::endl;}
 std::string zipped(std::string &s) {
 	if (s.size() > 5 && s.substr(s.size() - 5, 5) == ".mzip") return s.substr(0, s.size() - 5);
 	return "";
@@ -134,10 +134,9 @@ void encode(std::string filename) {
 		huffEncode(sourceStr);
 		sizeOfCompressed = (unsigned long long)(3 * sizeof(long long) + 258 * sizeof(int) + sizeOfResult * sizeof(char));
 		if (flags & C) {
-			std::cout << numOfPi << sizeOfCompressed << sizeOfResult << beginReverse;
+			std::cout << sizeOfResult << beginReverse;
 			for (int i = 0; i < 256; i++) std::cout<< linerTable[i];
 			for (unsigned int i = 0; i < linerStr.size(); i++) std::cout << linerStr[i];
-			std::cout << numOfPi << std::endl;
 		}
 		else {
 			lineSize = linerStr.size() + 1;
@@ -237,7 +236,14 @@ int zip() {
 		else list(inputFile);
 		return 0;
 	}
-	if (flags == 0 || flags & O || flags & N) {
+
+	if (flags & D) {
+		if (flags & R) recursive_step(inputFile.c_str(), &decode);
+		decode("");
+		return 0;
+	}
+
+	if (flags == 0 || flags & O || flags & N || flags & C || flags & R) {
 		if (flags & N) sizeOfBlock = MAX_BLOCK;
 		if (flags & R) {
 			if (flags & N) sizeOfBlock = MAX_BLOCK;
@@ -247,13 +253,6 @@ int zip() {
 		return 0;
 	}
 
-
-
-	if (flags & D) {
-		if (flags & R) recursive_step(inputFile.c_str(), &decode);
-		decode("");
-		return 0;
-	}
 
 	struct stat statbuf;
 	lstat( inputFile.c_str(), &statbuf );
